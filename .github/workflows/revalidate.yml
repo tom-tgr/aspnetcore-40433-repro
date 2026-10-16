@@ -1,0 +1,51 @@
+# Reruns the dotnet/aspnetcore#40433 benchmark (HTTP/3 vs HTTP/2) on current .NET versions.
+name: revalidate-40433
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  revalidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "11.0.x"
+          dotnet-quality: preview
+      - name: Install libmsquic and hyperfine
+        run: |
+          wget -q https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
+          sudo apt-get update -q
+          sudo apt-get install -y -q libmsquic hyperfine
+      - name: Development certificate (the issue's code calls UseHttps())
+        run: dotnet dev-certs https
+      - name: Run benchmark
+        run: ./run.sh 3000 net8.0 net10.0 net11.0
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### dotnet/aspnetcore#40433 revalidation"
+            echo
+            echo "- Runner: $(nproc) vCPU, $(lsb_release -ds), kernel $(uname -r)"
+            echo "- libmsquic: $(dpkg-query -W -f='${Version}' libmsquic)"
+            echo "- SDKs: $(dotnet --list-sdks | awk '{print $1}' | paste -sd ', ')"
+            echo
+            for f in results/*.md; do tail -n +3 "$f"; done | sed '1i | Command | Mean [ms] | Min [ms] | Max [ms] | Relative |\n|:---|---:|---:|---:|---:|'
+          } | tee summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: results
+          path: |
+            results/
+            summary.md

@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <!-- The app.csproj from https://github.com/dotnet/aspnetcore/issues/40433, with two changes:
+         TargetFramework is a parameter (was net7), and Protocol picks http2.cs or http3.cs. -->
+    <PropertyGroup>
+        <Tfm Condition="'$(Tfm)' == ''">net10.0</Tfm>
+        <Protocol Condition="'$(Protocol)' == ''">http3</Protocol>
+        <TargetFramework>$(Tfm)</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <LangVersion>latest</LangVersion>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <ServerGarbageCollection>true</ServerGarbageCollection>
+        <TieredCompilation>true</TieredCompilation>
+        <PublishReadyToRun>true</PublishReadyToRun>
+        <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+        <AssemblyName>app</AssemblyName>
+        <!-- ServicePointManager (SYSLIB0014) is obsolete and has no effect on SocketsHttpHandler; kept as in the issue. -->
+        <NoWarn>$(NoWarn);SYSLIB0014</NoWarn>
+    </PropertyGroup>
+    <ItemGroup>
+      <Compile Include="$(Protocol).cs" />
+    </ItemGroup>
+    <ItemGroup>
+      <RuntimeHostConfigurationOption Include="System.Net.SocketsHttpHandler.Http3Support" Value="true" />
+    </ItemGroup>
+    <ItemGroup>
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    </ItemGroup>
+</Project>
